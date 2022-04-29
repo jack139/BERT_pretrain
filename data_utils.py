@@ -344,17 +344,18 @@ if __name__ == '__main__':
     sequence_length = 512
     workers = 40
     max_queue_size = 4000
-    dict_path = '/home/spaces_ac_cn/chinese_L-12_H-768_A-12/vocab.txt'
+    dict_path = '../nlp_model/chinese_bert_L-12_H-768_A-12/vocab.txt'
     tokenizer = Tokenizer(dict_path, do_lower_case=True)
 
     def some_texts():
-        filenames = glob.glob('/home/spaces_ac_cn/corpus/*/*/*')
+        filenames = glob.glob('data/corpus/*/*')
         np.random.shuffle(filenames)
         count, texts = 0, []
         for filename in filenames:
             with open(filename) as f:
                 for l in f:
-                    l = json.loads(l)['text'].strip()
+                    #l = json.loads(l)['text'].strip()
+                    l = l.strip()
                     texts.extend(re.findall(u'.*?[\n。]+', l))
                     count += 1
                     if count == 10:  # 10篇文章合在一起再处理
@@ -380,7 +381,7 @@ if __name__ == '__main__':
         for i in range(10):  # 数据重复10遍
             TD.process(
                 corpus=tqdm(some_texts()),
-                record_name='../corpus_tfrecord/corpus.%s.tfrecord' % i,
+                record_name='data/corpus_tfrecord/corpus.%s.tfrecord' % i,
                 workers=workers,
                 max_queue_size=max_queue_size,
             )
@@ -391,7 +392,7 @@ if __name__ == '__main__':
 
         TD.process(
             corpus=tqdm(some_texts()),
-            record_name='../corpus_tfrecord/corpus.tfrecord',
+            record_name='data/corpus_tfrecord/corpus.tfrecord',
             workers=workers,
             max_queue_size=max_queue_size,
         )
@@ -402,7 +403,7 @@ if __name__ == '__main__':
 
         TD.process(
             corpus=tqdm(some_texts()),
-            record_name='../corpus_tfrecord/corpus.tfrecord',
+            record_name='data/corpus_tfrecord/corpus.tfrecord',
             workers=workers,
             max_queue_size=max_queue_size,
         )

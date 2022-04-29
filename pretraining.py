@@ -22,16 +22,17 @@ model = 'roberta'
 # 语料路径和模型保存路径
 # 如果是TPU训练，那么语料必须存放在Google Cloud Storage上面，
 # 路径必须以gs://开头；如果是GPU训练，改为普通路径即可。
-model_saved_path = 'gs://xxxx/bert4keras/saved_model/bert_model.ckpt'
+model_saved_path = 'ckpt/bert_model.ckpt'
 corpus_paths = [
-    'gs://xxxx/bert4keras/corpus/corpus.%s.tfrecord' % i for i in range(10)
+    #'gs://xxxx/bert4keras/corpus/corpus.%s.tfrecord' % i for i in range(10)
+    'data/corpus_tfrecord/corpus.%s.tfrecord' % i for i in range(10)
 ]
 
 # 其他配置
 sequence_length = 512
 batch_size = 4096
-config_path = '/home/spaces_ac_cn/chinese_L-12_H-768_A-12/bert_config.json'
-checkpoint_path = '/home/spaces_ac_cn/chinese_L-12_H-768_A-12/bert_model.ckpt'  # 如果从零训练，就设为None
+config_path = '../nlp_model/chinese_bert_L-12_H-768_A-12/bert_config.json'
+checkpoint_path = '../nlp_model/chinese_bert_L-12_H-768_A-12/bert_model.ckpt'  # 如果从零训练，就设为None
 learning_rate = 0.00176
 weight_decay_rate = 0.01
 num_warmup_steps = 3125
@@ -41,7 +42,7 @@ grad_accum_steps = 16  # 大于1即表明使用梯度累积
 epochs = num_train_steps * grad_accum_steps // steps_per_epoch
 exclude_from_weight_decay = ['Norm', 'bias']
 exclude_from_layer_adaptation = ['Norm', 'bias']
-tpu_address = 'grpc://xxx.xxx.xxx.xxx:8470'  # 如果用多GPU跑，直接设为None
+tpu_address = None  # 如果用多GPU跑，直接设为None
 which_optimizer = 'lamb'  # adam 或 lamb，均自带weight decay
 lr_schedule = {
     num_warmup_steps * grad_accum_steps: 1.0,
@@ -318,7 +319,7 @@ class ModelCheckpoint(keras.callbacks.Callback):
 # 保存模型
 checkpoint = ModelCheckpoint()
 # 记录日志
-csv_logger = keras.callbacks.CSVLogger('training.log')
+csv_logger = keras.callbacks.CSVLogger('data/training.log')
 
 # 模型训练
 train_model.fit(
