@@ -33,6 +33,7 @@ sequence_length = 512
 batch_size = 256
 config_path = '../nlp_model/chinese_bert_L-12_H-768_A-12/bert_config.json'
 checkpoint_path = '../nlp_model/chinese_bert_L-12_H-768_A-12/bert_model.ckpt'  # 如果从零训练，就设为None
+#checkpoint_path = None
 learning_rate = 0.00176
 weight_decay_rate = 0.01
 num_warmup_steps = 3125
@@ -320,6 +321,9 @@ class ModelCheckpoint(keras.callbacks.Callback):
 checkpoint = ModelCheckpoint()
 # 记录日志
 csv_logger = keras.callbacks.CSVLogger('data/training.log')
+
+# 加载中间结果 checkpoint
+#train_model.load_weights(model_saved_path)
 
 # 模型训练
 train_model.fit(
