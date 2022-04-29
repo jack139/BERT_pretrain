@@ -30,7 +30,7 @@ corpus_paths = [
 
 # 其他配置
 sequence_length = 512
-batch_size = 4096
+batch_size = 256
 config_path = '../nlp_model/chinese_bert_L-12_H-768_A-12/bert_config.json'
 checkpoint_path = '../nlp_model/chinese_bert_L-12_H-768_A-12/bert_model.ckpt'  # 如果从零训练，就设为None
 learning_rate = 0.00176
