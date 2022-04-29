@@ -1,0 +1,4 @@
+tensorflow==1.15.4
+Keras==2.3.1
+bert4keras==0.10.7
+jieba-fast
