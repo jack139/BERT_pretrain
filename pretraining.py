@@ -22,7 +22,7 @@ model = 'roberta'
 # 语料路径和模型保存路径
 # 如果是TPU训练，那么语料必须存放在Google Cloud Storage上面，
 # 路径必须以gs://开头；如果是GPU训练，改为普通路径即可。
-model_saved_path = 'ckpt/bert_model.ckpt'
+model_saved_path = 'ckpt/bert_model_ckpt.h5'
 corpus_paths = [
     #'gs://xxxx/bert4keras/corpus/corpus.%s.tfrecord' % i for i in range(10)
     'data/corpus_tfrecord/corpus.%s.tfrecord' % i for i in range(10)
@@ -289,46 +289,50 @@ def build_transformer_model_for_pretraining():
     return train_model
 
 
-if tpu_address is None:
-    # 单机多卡模式（多机多卡也类似，但需要硬软件配合，请参考https://tf.wiki）
-    strategy = tf.distribute.MirroredStrategy()
-else:
-    # TPU模式
-    resolver = tf.distribute.cluster_resolver.TPUClusterResolver(
-        tpu=tpu_address
+if __name__ == '__main__':
+
+    if tpu_address is None:
+        # 单机多卡模式（多机多卡也类似，但需要硬软件配合，请参考https://tf.wiki）
+        strategy = tf.distribute.MirroredStrategy()
+    else:
+        # TPU模式
+        resolver = tf.distribute.cluster_resolver.TPUClusterResolver(
+            tpu=tpu_address
+        )
+        tf.config.experimental_connect_to_host(resolver.master())
+        tf.tpu.experimental.initialize_tpu_system(resolver)
+        strategy = tf.distribute.experimental.TPUStrategy(resolver)
+
+    with strategy.scope():
+        train_model = build_transformer_model_for_pretraining()
+        train_model.summary()
+
+
+    class ModelCheckpoint(keras.callbacks.Callback):
+        """自动保存最新模型
+        """
+        def on_epoch_end(self, epoch, logs=None):
+            # model.save_weights 保存的模型，用 model.load_weights 加载
+            # bert.save_weights_as_checkpoint 保存的模型，用 bert.load_weights_from_checkpoint 加载
+            # 不要问为什么保存的模型用 build_transformer_model 加载不了
+            # 先搞清楚对应情况，build_transformer_model 是用 load_weights_from_checkpoint 加载的。
+            self.model.save_weights(model_saved_path, overwrite=True, save_format='h5') # 使用 h5 格式
+
+
+    # 保存模型
+    checkpoint = ModelCheckpoint()
+    # 记录日志
+    csv_logger = keras.callbacks.CSVLogger('data/training.log')
+
+
+    # 加载中间结果 checkpoint
+    #train_model.load_weights(model_saved_path)
+
+    # 模型训练
+    print('begin training...')
+    train_model.fit(
+        dataset,
+        steps_per_epoch=steps_per_epoch,
+        epochs=epochs,
+        callbacks=[checkpoint, csv_logger],
     )
-    tf.config.experimental_connect_to_host(resolver.master())
-    tf.tpu.experimental.initialize_tpu_system(resolver)
-    strategy = tf.distribute.experimental.TPUStrategy(resolver)
-
-with strategy.scope():
-    train_model = build_transformer_model_for_pretraining()
-    train_model.summary()
-
-
-class ModelCheckpoint(keras.callbacks.Callback):
-    """自动保存最新模型
-    """
-    def on_epoch_end(self, epoch, logs=None):
-        # model.save_weights 保存的模型，用 model.load_weights 加载
-        # bert.save_weights_as_checkpoint 保存的模型，用 bert.load_weights_from_checkpoint 加载
-        # 不要问为什么保存的模型用 build_transformer_model 加载不了
-        # 先搞清楚对应情况，build_transformer_model 是用 load_weights_from_checkpoint 加载的。
-        self.model.save_weights(model_saved_path, overwrite=True)
-
-
-# 保存模型
-checkpoint = ModelCheckpoint()
-# 记录日志
-csv_logger = keras.callbacks.CSVLogger('data/training.log')
-
-# 加载中间结果 checkpoint
-#train_model.load_weights(model_saved_path)
-
-# 模型训练
-train_model.fit(
-    dataset,
-    steps_per_epoch=steps_per_epoch,
-    epochs=epochs,
-    callbacks=[checkpoint, csv_logger],
-)
