@@ -22,7 +22,7 @@ model = 'roberta'
 # 语料路径和模型保存路径
 # 如果是TPU训练，那么语料必须存放在Google Cloud Storage上面，
 # 路径必须以gs://开头；如果是GPU训练，改为普通路径即可。
-model_saved_path = 'ckpt/bert_model_ckpt.h5'
+model_saved_path = 'ckpt'
 corpus_paths = [
     #'gs://xxxx/bert4keras/corpus/corpus.%s.tfrecord' % i for i in range(10)
     'data/corpus_tfrecord/corpus.%s.tfrecord' % i for i in range(10)
@@ -316,7 +316,7 @@ if __name__ == '__main__':
             # bert.save_weights_as_checkpoint 保存的模型，用 bert.load_weights_from_checkpoint 加载
             # 不要问为什么保存的模型用 build_transformer_model 加载不了
             # 先搞清楚对应情况，build_transformer_model 是用 load_weights_from_checkpoint 加载的。
-            self.model.save_weights(model_saved_path, overwrite=True, save_format='h5') # 使用 h5 格式
+            self.model.save_weights(f'{model_saved_path}/bert_weights_e{epoch}.h5', overwrite=True, save_format='h5') # 使用 h5 格式
 
 
     # 保存模型
@@ -325,7 +325,7 @@ if __name__ == '__main__':
     csv_logger = keras.callbacks.CSVLogger('data/training.log')
 
     # 加载中间结果 checkpoint
-    #train_model.load_weights(model_saved_path)
+    train_model.load_weights('ckpt/bert_model_ckpt.h5')
 
     # 模型训练
     print('begin training...')
@@ -335,6 +335,12 @@ if __name__ == '__main__':
         epochs=epochs,
         callbacks=[checkpoint, csv_logger],
     )
+
+else:
+    # 转换格式
+
+    # 加载中间结果 checkpoint
+    train_model.load_weights('ckpt/bert_model_ckpt.h5')
 
     # 保存 bert 的 checkpoint
     bert_model.save_weights_as_checkpoint('ckpt/bert_weights.ckpt')
