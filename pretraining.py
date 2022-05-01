@@ -32,8 +32,8 @@ corpus_paths = [
 sequence_length = 512
 batch_size = 256
 config_path = '../nlp_model/chinese_bert_L-12_H-768_A-12/bert_config.json'
-checkpoint_path = '../nlp_model/chinese_bert_L-12_H-768_A-12/bert_model.ckpt'  # 如果从零训练，就设为None
-#checkpoint_path = None
+#checkpoint_path = '../nlp_model/chinese_bert_L-12_H-768_A-12/bert_model.ckpt'  # 如果从零训练，就设为None
+checkpoint_path = None
 learning_rate = 0.00176
 weight_decay_rate = 0.01
 num_warmup_steps = 3125
@@ -286,7 +286,7 @@ def build_transformer_model_for_pretraining():
     if checkpoint_path is not None:
         bert.load_weights_from_checkpoint(checkpoint_path)
 
-    return train_model
+    return bert, train_model
 
 
 if __name__ == '__main__':
@@ -304,7 +304,7 @@ if __name__ == '__main__':
         strategy = tf.distribute.experimental.TPUStrategy(resolver)
 
     with strategy.scope():
-        train_model = build_transformer_model_for_pretraining()
+        bert_model, train_model = build_transformer_model_for_pretraining()
         train_model.summary()
 
 
@@ -324,7 +324,6 @@ if __name__ == '__main__':
     # 记录日志
     csv_logger = keras.callbacks.CSVLogger('data/training.log')
 
-
     # 加载中间结果 checkpoint
     #train_model.load_weights(model_saved_path)
 
@@ -336,3 +335,6 @@ if __name__ == '__main__':
         epochs=epochs,
         callbacks=[checkpoint, csv_logger],
     )
+
+    # 保存 bert 的 checkpoint
+    bert_model.save_weights_as_checkpoint('ckpt/bert_weights.ckpt')
