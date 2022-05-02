@@ -34,9 +34,9 @@ batch_size = 256
 config_path = '../nlp_model/chinese_bert_L-12_H-768_A-12/bert_config.json'
 #checkpoint_path = '../nlp_model/chinese_bert_L-12_H-768_A-12/bert_model.ckpt'  # 如果从零训练，就设为None
 checkpoint_path = None
-learning_rate = 0.00176
+learning_rate = 5e-5 #0.00176
 weight_decay_rate = 0.01
-num_warmup_steps = 3125
+num_warmup_steps = 0 #3125
 num_train_steps = 125000
 steps_per_epoch = 10000
 grad_accum_steps = 16  # 大于1即表明使用梯度累积
@@ -289,34 +289,40 @@ def build_transformer_model_for_pretraining():
     return bert, train_model
 
 
+if tpu_address is None:
+    # 单机多卡模式（多机多卡也类似，但需要硬软件配合，请参考https://tf.wiki）
+    strategy = tf.distribute.MirroredStrategy()
+else:
+    # TPU模式
+    resolver = tf.distribute.cluster_resolver.TPUClusterResolver(
+        tpu=tpu_address
+    )
+    tf.config.experimental_connect_to_host(resolver.master())
+    tf.tpu.experimental.initialize_tpu_system(resolver)
+    strategy = tf.distribute.experimental.TPUStrategy(resolver)
+
+with strategy.scope():
+    bert_model, train_model = build_transformer_model_for_pretraining()
+    train_model.summary()
+
+
 if __name__ == '__main__':
-
-    if tpu_address is None:
-        # 单机多卡模式（多机多卡也类似，但需要硬软件配合，请参考https://tf.wiki）
-        strategy = tf.distribute.MirroredStrategy()
-    else:
-        # TPU模式
-        resolver = tf.distribute.cluster_resolver.TPUClusterResolver(
-            tpu=tpu_address
-        )
-        tf.config.experimental_connect_to_host(resolver.master())
-        tf.tpu.experimental.initialize_tpu_system(resolver)
-        strategy = tf.distribute.experimental.TPUStrategy(resolver)
-
-    with strategy.scope():
-        bert_model, train_model = build_transformer_model_for_pretraining()
-        train_model.summary()
-
 
     class ModelCheckpoint(keras.callbacks.Callback):
         """自动保存最新模型
         """
         def on_epoch_end(self, epoch, logs=None):
+            logs = logs or {}
+            mlm_acc_loss = logs.get('mlm_acc_loss')
             # model.save_weights 保存的模型，用 model.load_weights 加载
             # bert.save_weights_as_checkpoint 保存的模型，用 bert.load_weights_from_checkpoint 加载
             # 不要问为什么保存的模型用 build_transformer_model 加载不了
             # 先搞清楚对应情况，build_transformer_model 是用 load_weights_from_checkpoint 加载的。
-            self.model.save_weights(f'{model_saved_path}/bert_weights_e{epoch}.h5', overwrite=True, save_format='h5') # 使用 h5 格式
+            self.model.save_weights(
+                f'{model_saved_path}/bert_weights_e{epoch+1}_{mlm_acc_loss:.5f}.h5', 
+                overwrite=True, 
+                save_format='h5', # 使用 h5 格式
+            )
 
 
     # 保存模型
@@ -325,7 +331,7 @@ if __name__ == '__main__':
     csv_logger = keras.callbacks.CSVLogger('data/training.log')
 
     # 加载中间结果 checkpoint
-    train_model.load_weights('ckpt/bert_model_ckpt.h5')
+    train_model.load_weights('ckpt/bert_weights_e1_0.5434.h5')
 
     # 模型训练
     print('begin training...')
@@ -340,7 +346,7 @@ else:
     # 转换格式
 
     # 加载中间结果 checkpoint
-    train_model.load_weights('ckpt/bert_model_ckpt.h5')
+    train_model.load_weights('ckpt/bert_weights_e1_0.5434.h5')
 
     # 保存 bert 的 checkpoint
     bert_model.save_weights_as_checkpoint('ckpt/bert_weights.ckpt')
