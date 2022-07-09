@@ -331,7 +331,7 @@ if __name__ == '__main__':
     csv_logger = keras.callbacks.CSVLogger('data/training.log')
 
     # 加载中间结果 checkpoint
-    train_model.load_weights('ckpt/bert_weights_e1_0.56221.h5')
+    train_model.load_weights('ckpt/bert_weights_e1_0.59374.h5')
 
     # 模型训练
     print('begin training...')
@@ -346,7 +346,7 @@ else:
     # 转换格式
 
     # 加载中间结果 checkpoint
-    train_model.load_weights('ckpt/bert_weights_e1_0.5434.h5')
+    train_model.load_weights('ckpt/bert_weights_e1_0.59374.h5')
 
     # 保存 bert 的 checkpoint
     bert_model.save_weights_as_checkpoint('ckpt/bert_weights.ckpt')
